@@ -80,3 +80,9 @@ class nnUNetTrainer3DSqEx2D_wd_normal_dice(nnUNetTrainer3DSqEx2D_wd):
         self.logger.log('mean_fg_dice', mean_fg_dice, self.current_epoch)
         self.logger.log('dice_per_class_or_region', global_dc_per_class, self.current_epoch)
         self.logger.log('val_losses', loss_here, self.current_epoch)
+
+class nnUNetTrainer3DSqEx2D_wd_5_epochs(nnUNetTrainer3DSqEx2D_wd):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
+        self.num_epochs = 5

@@ -1,129 +1,87 @@
-# Welcome to the new nnU-Net!
+We are very grateful for the organization of this very interesting competition. Sincere thanks to the hosts and the Kaggle team. A big thank you to Yannick and Max, it was lots of fun working with you! For all of us it was the first Kaggle competition. 
 
-Click [here](https://github.com/MIC-DKFZ/nnUNet/tree/nnunetv1) if you were looking for the old one instead.
+## Summary
 
-Coming from V1? Check out the [TLDR Migration Guide](documentation/tldr_migration_guide_from_v1.md). Reading the rest of the documentation is still strongly recommended ;-)
+In this competition submission, we used the [nnU-Net framework](https://github.com/MIC-DKFZ/nnUNet), a recognized powerhouse in the medical imaging domain. The success of nnU-Net is validated by its adoption in winning solutions of 9 out of 10 challenges at [MICCAI 2020](https://arxiv.org/abs/2101.00232), 5 out of 7 in MICCAI 2021 and the first place in the [AMOS 2022](https://amos22.grand-challenge.org/final-ranking/) challange.
 
-# What is nnU-Net?
-Image datasets are enormously diverse: image dimensionality (2D, 3D), modalities/input channels (RGB image, CT, MRI, microscopy, ...), 
-image sizes, voxel sizes, class ratio, target structure properties and more change substantially between datasets. 
-Traditionally, given a new problem, a tailored solution needs to be manually designed and optimized  - a process that 
-is prone to errors, not scalable and where success is overwhelmingly determined by the skill of the experimenter. Even 
-for experts, this process is anything but simple: there are not only many design choices and data properties that need to 
-be considered, but they are also tightly interconnected, rendering reliable manual pipeline optimization all but impossible! 
+To tackle the three-dimensional nature of the given task, we designed a custom network architecture: a 3D Encoder 2D Decoder U-Net model using Squeeze-and-Excitation (SE) blocks within the skip connections. We used fragment-wise normalization and selected 32 slices for training, enabling us to extend the patch size to 32x512x512. We divided each fragment into 25 pieces and trained five folds. We only submitted models that performed well on our validation data. For the final submission, we ensambled the weights of two folds (zero and two) from two respective models. One model was trained with a batch size of 2 and a weight decay of 3e-5, while the other was trained with a batch size of 4 and a weight decay of 1e-4. During test time augmentation, we implemented mirroring along all axes and in-plane rotation of 90°, resulting in a total of eight separate predictions per model for each patch. 
 
-![nnU-Net overview](documentation/assets/nnU-Net_overview.png)
+For the two submissions we chose two different postprcessing techniques. The first approach involved setting the threshold of the softmax outputs from the network from 0.5 to 0.6. As a second step we conducted a connected component analysis to eliminate all instances with a softmax 95th percentile value below 0.8. The second approach involved utilizing an off-the-shelf 2D U-Net model with a patch size of 2048x2048 on the softmax outputs of the first model. The output was resized to 1024x1024 for inference and then scaled up to 2048x2048. The intention behind this step was to capture more structural elements, such as the shape of letters, due to the higher resolution of the input. We regret both since they only improved results for public testset.
 
-**nnU-Net is a semantic segmentation method that automatically adapts to a given dataset. It will analyze the provided 
-training cases and automatically configure a matching U-Net-based segmentation pipeline. No expertise required on your 
-end! You can simply train the models and use them for your application**.
+## Model Architecture
 
-Upon release, nnU-Net was evaluated on 23 datasets belonging to competitions from the biomedical domain. Despite competing 
-with handcrafted solutions for each respective dataset, nnU-Net's fully automated pipeline scored several first places on 
-open leaderboards! Since then nnU-Net has stood the test of time: it continues to be used as a baseline and method 
-development framework ([9 out of 10 challenge winners at MICCAI 2020](https://arxiv.org/abs/2101.00232) and 5 out of 7 
-in MICCAI 2021 built their methods on top of nnU-Net, 
- [we won AMOS2022 with nnU-Net](https://amos22.grand-challenge.org/final-ranking/))!
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F6289140%2Fbf19626f416be872fbb0b56b92a6c585%2FModel.png?generation=1686847814703959&alt=media)
 
-Please cite the [following paper](https://www.google.com/url?q=https://www.nature.com/articles/s41592-020-01008-z&sa=D&source=docs&ust=1677235958581755&usg=AOvVaw3dWL0SrITLhCJUBiNIHCQO) when using nnU-Net:
+As been mentioned, we chose a 3D Encoder 2D Decoder U-Net model using SE blocks within the skip connections. Therefore, the selected slices were still seen as a 3D input volume by our network. After passing through the encoder, the features were mapped to 2D on all levels (i.e., skip connections) using a specific weighting. One unique aspect of the network to highlight is that the encoder contained four convolutions in each stage to process the difficult 3D input, whereas the decoder only had two convolutional blocks.
 
-    Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring 
-    method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+The mapping was initially performed using a simple average operation but was later refined with the use of Squeeze-and-Excitation. However, instead of applying the SE on the channel dimension — as is usually done to highlight important channels — we applied one SE Block per level (i.e., skip) to all channels, but on the x-dimension. This results in a weighting of the slices in feature space, so when aggregating with the average operation later, each slice has a different contribution.
 
+## Preprocessing
 
-## What can nnU-Net do for you?
-If you are a **domain scientist** (biologist, radiologist, ...) looking to analyze your own images, nnU-Net provides 
-an out-of-the-box solution that is all but guaranteed to provide excellent results on your individual dataset. Simply 
-convert your dataset into the nnU-Net format and enjoy the power of AI - no expertise required!
+In the preprocessing stage, we cropped each fragment into 25 parts and ensured they contain an equal amount of data points (area labeled as foreground in the mask.png). This process was performed to create five folds for training.
 
-If you are an **AI researcher** developing segmentation methods, nnU-Net:
-- offers a fantastic out-of-the-box applicable baseline algorithm to compete against
-- can act as a method development framework to test your contribution on a large number of datasets without having to 
-tune individual pipelines (for example evaluating a new loss function)
-- provides a strong starting point for further dataset-specific optimizations. This is particularly used when competing 
-in segmentation challenges
-- provides a new perspective on the design of segmentation methods: maybe you can find better connections between 
-dataset properties and best-fitting segmentation pipelines?
+For the selection of the 32 slices, we calculated the intensity distributions for each individual fragment. From these distributions, we determined the minimum and maximum values and calculated the middle point between them. We then cropped 32 slices around this chosen central slice. The following plot shows the intensity distribution for the individual fragments. The vertical line in the plot represents the midpoint between the maximum and minimum intensity values.
 
-## What is the scope of nnU-Net?
-nnU-Net is built for semantic segmentation. It can handle 2D and 3D images with arbitrary 
-input modalities/channels. It can understand voxel spacings, anisotropies and is robust even when classes are highly
-imbalanced.
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F6289140%2F1fd4a8e4dbccd46f59d3ca92b19fb74d%2Fintesity_dist.png?generation=1686847846933995&alt=media)
 
-nnU-Net relies on supervised learning, which means that you need to provide training cases for your application. The number of 
-required training cases varies heavily depending on the complexity of the segmentation problem. No 
-one-fits-all number can be provided here! nnU-Net does not require more training cases than other solutions - maybe 
-even less due to our extensive use of data augmentation. 
+To further preprocess the data, we applied z-scoring to normalize the intensity values. Additionally, we clipped the intensity values at the 0.5 and 99.5 percentiles to remove extreme outliers. Finally, we performed normalization on each individual fragment to ensure consistency across the dataset.
 
-nnU-Net expects to be able to process entire images at once during preprocessing and postprocessing, so it cannot 
-handle enormous images. As a reference: we tested images from 40x40x40 pixels all the way up to 1500x1500x1500 in 3D 
-and 40x40 up to ~30000x30000 in 2D! If your RAM allows it, larger is always possible.
+## Training
 
-## How does nnU-Net work?
-Given a new dataset, nnU-Net will systematically analyze the provided training cases and create a 'dataset fingerprint'. 
-nnU-Net then creates several U-Net configurations for each dataset: 
-- `2d`: a 2D U-Net (for 2D and 3D datasets)
-- `3d_fullres`: a 3D U-Net that operates on a high image resolution (for 3D datasets only)
-- `3d_lowres` → `3d_cascade_fullres`: a 3D U-Net cascade where first a 3D U-Net operates on low resolution images and 
-then a second high-resolution 3D U-Net refined the predictions of the former (for 3D datasets with large image sizes only)
+Here are some insights into our training pipeline.
 
-nnU-Net then configures these segmentation pipelines based on a three-step recipe:
-- **Fixed parameters** are not adapted. During development of nnU-Net we identified a robust configuration (that is, certain architecture and training properties) that can 
-simply be used all the time. This includes, for example, nnU-Net's loss function, (most of the) data augmentation strategy and learning rate.
-- **Rule-based parameters** use the dataset fingerprint to adapt certain segmentation pipeline properties by following 
-hard-coded heuristic rules. For example, the network topology (pooling behavior and depth of the network architecture) 
-are adapted to the patch size; the patch size, network topology and batch size are optimized jointly given some GPU 
-memory constraint. 
-- **Empirical parameters** are essentially trial-and-error. For example the selection of the best U-net configuration 
-for the given dataset (2D, 3D full resolution, 3D low resolution, 3D cascade) and the optimization of the postprocessing strategy.
+### Augmentation
 
-## How to get started?
-Read these:
-- [Installation instructions](documentation/installation_instructions.md)
-- [Dataset conversion](documentation/dataset_format.md)
-- [Usage instructions](documentation/how_to_use_nnunet.md)
+For the most part, we utilized the out-of-the-box augmentation techniques provided by nnU-Net, a framework specifically designed for medical image segmentation. These techniques formed the foundation of our data augmentation pipeline. However, we made certain modifications and additions to tailor the augmentation process to our specific task and data characteristics:
 
-Additional information:
-- [Region-based training](documentation/region_based_training.md)
-- [Manual data splits](documentation/manual_data_splits.md)
-- [Pretraining and finetuning](documentation/pretraining_and_finetuning.md)
-- [Intensity Normalization in nnU-Net](documentation/explanation_normalization.md)
-- [Manually editing nnU-Net configurations](documentation/explanation_plans_files.md)
-- [Extending nnU-Net](documentation/extending_nnunet.md)
-- [What is different in V2?](documentation/changelog.md)
+- Rotation: We performed rotations only in the plane, meaning we applied rotations along the y and z axes. Out-of-plane rotations were considered as a measure to ensure stability but were not implemented.
+- Scaling: We introduced scaling augmentation, allowing the data to be randomly scaled within a certain range. This helped to increase the diversity of object sizes in the training data.
+- Gaussian Noise: We added Gaussian noise to the data, which helps to simulate realistic variations in image acquisition and improve the model's ability to handle noise.
+- Gaussian Blur: We applied Gaussian blur to the data, with varying levels of blurring intensity. This transformation aimed to capture the variations in image quality that can occur in different imaging settings.
+- Brightness and Contrast: We incorporated brightness and contrast augmentation to simulate variations in lighting conditions.
+- Simulate Low Resolution: We introduced a transformation to simulate low-resolution imaging by randomly zooming the data within a specified range. This augmentation aimed to make the model more robust to lower resolution images.
+- Gamma Transformation: We applied gamma transformations to the data, which adjusted the pixel intensities to enhance or reduce image contrast. This augmentation technique helps the model adapt to different contrast levels in input images.
+- Mirror Transform: We employed mirroring along specified axes to introduce further variations in object orientations and appearances.
 
-[//]: # (- [Ignore label]&#40;documentation/ignore_label.md&#41;)
+### Training Curves for Submission Folds
 
-## Where does nnU-net perform well and where does it not perform?
-nnU-Net excels in segmentation problems that need to be solved by training from scratch, 
-for example: research applications that feature non-standard image modalities and input channels,
-challenge datasets from the biomedical domain, majority of 3D segmentation problems, etc . We have yet to find a 
-dataset for which nnU-Net's working principle fails!
+Batch size of 4 and a weight decay of 1e-4. Fold 0.
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F6289140%2Fb0086c8f134adc9b58a78097cec48151%2Fprogress_0_0.png?generation=1686847908240065&alt=media)
+Batch size of 4 and a weight decay of 1e-4. Fold 2.
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F6289140%2F5afa0a5b3cc9890b40155af6265c9617%2Fprogress_0_2.png?generation=1686847917423689&alt=media)
+Batch size of 2 and a weight decay of 3e-5. Fold 0.
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F6289140%2Facd870b03c91b9f4f6875b9d01a7858f%2Fprogress_1_0.png?generation=1686847926934043&alt=media)
+Batch size of 2 and a weight decay of 3e-5. Fold 2.
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F6289140%2F7cd38547bc3d2d76aa0050889c09ed2a%2Fprogress_1_2.png?generation=1686847935394605&alt=media)
 
-Note: On standard segmentation 
-problems, such as 2D RGB images in ADE20k and Cityscapes, fine-tuning a foundation model (that was pretrained on a large corpus of 
-similar images, e.g. Imagenet 22k, JFT-300M) will provide better performance than nnU-Net! That is simply because these 
-models allow much better initialization. Foundation models are not supported by nnU-Net as 
-they 1) are not useful for segmentation problems that deviate from the standard setting (see above mentioned 
-datasets), 2) would typically only support 2D architectures and 3) conflict with our core design principle of carefully adapting 
-the network topology for each dataset (if the topology is changed one can no longer transfer pretrained weights!) 
+## Inference
 
-## What happened to the old nnU-Net?
-The core of the old nnU-Net was hacked together in a short time period while participating in the Medical Segmentation 
-Decathlon challenge in 2018. Consequently, code structure and quality were not the best. Many features 
-were added later on and didn't quite fit into the nnU-Net design principles. Overall quite messy, really. And annoying to work with.
+We made the decision to submit only the ensemble of fold 0 and fold 2 models due to their superior performance on the validation data compared to the other folds. The difference in Dice score between these two folds and the rest of the folds was substantial, with a margin of ~0.1. As a result, we deemed the ensemble of fold 0 and fold 2 models to be the most reliable and effective for our final submission (we fools).
 
-nnU-Net V2 is a complete overhaul. The "delete everything and start again" kind. So everything is better 
-(in the author's opinion haha). While the segmentation performance [remains the same](https://docs.google.com/spreadsheets/d/13gqjIKEMPFPyMMMwA1EML57IyoBjfC3-QCTn4zRN_Mg/edit?usp=sharing), a lot of cool stuff has been added. 
-It is now also much easier to use it as a development framework and to manually fine-tune its configuration to new 
-datasets. A big driver for the reimplementation was also the emergence of [Helmholtz Imaging](http://helmholtz-imaging.de), 
-prompting us to extend nnU-Net to more image formats and domains. Take a look [here](documentation/changelog.md) for some highlights.
+Additionally, we made the decision to incorporate test time augmentation (TTA) techniques during the inference process. TTA involved applying mirroring along all axes and in-plane rotation of 90° to each patch. By performing these augmentations, we generated a total of eight separate predictions per model for each patch.
 
-# Acknowledgements
-<img src="documentation/assets/HI_Logo.png" height="100px" />
+### Post Processing
 
-<img src="documentation/assets/dkfz_logo.png" height="100px" />
+In a moment of desperate determination to achieve better results on the public test set, one audacious team member decided to dive headfirst into the realm of advanced post-processing. This daring soul concocted a daring plan: raise the threshold of the softmax outputs from a mundane 0.5 to a daring 0.6. But that was just the beginning!
 
-nnU-Net is developed and maintained by the Applied Computer Vision Lab (ACVL) of [Helmholtz Imaging](http://helmholtz-imaging.de) 
-and the [Division of Medical Image Computing](https://www.dkfz.de/en/mic/index.php) at the 
-[German Cancer Research Center (DKFZ)](https://www.dkfz.de/en/index.html).
+Undeterred by caution, the same intrepid individual embarked on a quest to conduct a connected component analysis, mercilessly discarding all instances with a lowly softmax 95th percentile value below the illustrious threshold of 0.8.
+
+With fervor and a touch of madness, this brave adventurer tested countless combinations of thresholds, determined to find the golden ticket to enhanced validation scores across all folds. A relentless pursuit of validation improvement that knew no bounds.
+
+On the public test set, this fearless undertaking delivered a substantial boost of 0.05 dice points, raising hopes and spirits across the team. The unexpected improvement injected a renewed sense of excitement and optimism.
+
+However, as fate would have it, on the ultimate battlefield of the 50% final, the outcome took a peculiar twist. The gains dwindled ever so slightly, with a meager decrease of -0.002 dice points. Though the difference may seem minuscule, in the realm of fierce competition, every decimal point counts.
+
+Sorry guys.
+
+### 2D Unet Refinement 
+
+The second approach involved employing a 2D U-Net model with a patch size of 2048x2048 on the softmax outputs generated by the first model. Subsequently, the model's output was resized to 1024x1024 for inference purposes and then scaled up to the original resolution of 2048x2048. The rationale behind this strategy was to leverage the higher resolution input data to capture finer structural details, including the intricate shapes of letters. The training data for our this model was derived from inferences made by our various trained models on the original training data.
+
+Whose idea was this?
+
+Sorry again.
+
+## Preliminary Last Words
+
+More details will follow, cheers!

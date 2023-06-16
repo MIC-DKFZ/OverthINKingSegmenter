@@ -1,7 +1,6 @@
 import torch
 
 from nnunetv2.training.nnUNetTrainer.variants.network_architecture.nnUNetTrainer3DSqEx2D import nnUNetTrainer3DSqEx2D, nnUNetTrainer3DSqEx2DLongTraining
-from nnunetv2.training.nnUNetTrainer.variants.network_architecture.nnUNetTrainer3DSqEx2Dloss import nnUNetTrainer3DSqEx2DFocal, nnUNetTrainer3DSqEx2DRevTopK
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss, DC_and_BCE_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss
@@ -22,21 +21,6 @@ class nnUNetTrainer3DSqEx2DLongTraining_wd(nnUNetTrainer3DSqEx2DLongTraining):
                  device: torch.device = torch.device('cuda')):
         super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
         self.weight_decay = 1e-4
-
-
-class nnUNetTrainer3DSqEx2DFocal_wd(nnUNetTrainer3DSqEx2DFocal):
-    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
-                 device: torch.device = torch.device('cuda')):
-        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
-        self.weight_decay = 1e-4
-
-
-class nnUNetTrainer3DSqEx2DRevTopK_wd(nnUNetTrainer3DSqEx2DRevTopK):
-    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
-                device: torch.device = torch.device('cuda')):
-        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
-        self.weight_decay = 1e-4
-
 
 class nnUNetTrainer3DSqEx2D_wd_normal_dice(nnUNetTrainer3DSqEx2D_wd):
     def _build_loss(self):

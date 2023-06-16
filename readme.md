@@ -1,5 +1,7 @@
 # OverthINKingSegmenter
 
+This was our contribution for 7th place in the [Vesuvius Challenge - Ink Detection](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection).
+
 We are very grateful for the organization of this very interesting competition. Sincere thanks to the hosts and the Kaggle team. A big thank you to Yannick and Max, it was lots of fun working with you! For all of us it was the first Kaggle competition. 
 
 ## Summary

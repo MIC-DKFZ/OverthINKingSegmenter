@@ -86,6 +86,74 @@ Whose idea was this?
 
 Sorry again.
 
+## Steps to reproduce our submission
+
+### Dataset preparation
+
+After downloading the data from the [challenge website](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/data) you need to prepare the data for nnUNet. This is rather straightforward, as we have adopted the dataset structure for this challenge and use a custom reader writer class. The only thing you really need to do is the conversion of the ground truth labels from png to tif files. The scans are saved as folders containing all 65 slices in the original tif format.
+
+```
+  nnUNet_raw/Dataset800_vesuvius/
+  ├── dataset.json
+  ├── imagesTr
+  │   ├── scroll_1_0000
+  |   |   ├── 00.tif
+  |   |   ├── 01.tif
+  |   |   ├── ...
+  |   |   └── 64.tif
+  │   ├── scroll_2_0000
+  |   |   ├── ...
+  │   └── scroll_3_0000
+  |   |   ├── ...
+  └── labelsTr
+      ├── scroll_1.tif
+      ├── scroll_2.tif
+      └── scroll_3.tif
+```
+
+The dataset.json should look similar to this:
+```
+{
+    "channel_names": {
+        "0": "CT16"
+    },
+    "description": "dataset for the vesuvius challenge",
+    "file_ending": ".tif",
+    "labels": {
+        "background": 0,
+        "foreground": 1
+    },
+    "overwrite_image_reader_writer": "Vesuvius3D2DIO",
+    "name": "Dataset800_vesuvius",
+    "numTraining": 3,
+    "reference": "",
+    "release": "0.0"
+}
+```
+Note, that it is important to overwrite the image reader/writer such that nnUNet can handle the changed dataset structure!
+
+### Data preprocessing
+
+Preprocessing of the dataset can be done by running the `nnUNetv2_plan_and_preprocess` command with the following arguments:
+
+`nnUNetv2_plan_and_preprocess -d 800 -fpe DatasetFingerprintExtractor3D2DSliceselect -npfp 1 -pl ExperimentPlanner3D2DSliceselect -preprocessor_name Preprocessor3D2DSliceselect -c 3d_fullres -np 1`
+
+This command will perform the preprocessing outlined in our method description. It will take care of the extraction of the 32 slices used by the model as well as the individual intensity normalization. The data is saved in the nnUNet_preprocessed folder as npz files.
+
+You will need at least 64GB RAM to run the preprocessing for this dataset! Do not change the number of processes unless you are sure that it will fit into memory!
+
+### Splitting up the dataset
+
+In order to enable training 5 fold cross validation the data needs to be split into parts. The Jupyter Notebook `dataset_splitting.ipynb` found in `nnunetv2/notebooks` takes care of this.
+
+### Training of the model
+
+TBD
+
+### Inference on test data
+
+TBD
+
 ## Preliminary Last Words
 
 More details will follow, cheers!

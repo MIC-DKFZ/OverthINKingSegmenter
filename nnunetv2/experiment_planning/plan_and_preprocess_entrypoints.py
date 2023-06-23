@@ -110,8 +110,8 @@ def preprocess_entry():
 
 def plan_and_preprocess_entry(debug=False):
      if debug:
-          sys.argv = ['nnUNetv2_plan_and_preprocess', '-d', '775', '-fpe', 'DatasetFingerprintExtractor3D2DSliceselect', '-npfp', '1',
-                    '-pl', 'ExperimentPlanner3D2DSliceselect', '-preprocessor_name', 'Preprocessor3D2DSliceselectStandardize', '-c', 
+          sys.argv = ['nnUNetv2_plan_and_preprocess', '-d', '800', '-fpe', 'DatasetFingerprintExtractor3D2DSliceselect', '-npfp', '1',
+                    '-pl', 'ExperimentPlanner3D2DSliceselect', '-preprocessor_name', 'Preprocessor3D2DSliceselect', '-c', 
                     '3d_fullres', '-np', '1'
                     ]
 

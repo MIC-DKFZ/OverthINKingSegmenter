@@ -345,7 +345,7 @@ class ExperimentPlanner3D2DSliceselect(object):
             'data_identifier': data_identifier,
             'preprocessor_name': self.preprocessor_name,
             'batch_size': batch_size,
-            'patch_size': patch_size,
+            'patch_size': [32, *patch_size[1:]], # we manually the patch size here to keep everything else consistent with our submissions
             'median_image_size_in_voxels': median_shape,
             'spacing': spacing,
             'normalization_schemes': normalization_schemes,

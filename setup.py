@@ -31,8 +31,7 @@ setup(name='nnunetv2',
           "matplotlib",
           "seaborn",
           "imagecodecs",
-          "yacs",
-          "monai"
+          "yacs"
       ],
       entry_points={
           'console_scripts': [

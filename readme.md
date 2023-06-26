@@ -88,6 +88,8 @@ Sorry again.
 
 ## Steps to reproduce our submission
 
+Our submission can be easily reproduced following the following steps. We will also share python scripts to easily do data preparation, training and inference with minimal manual intervention.
+
 ### Dataset preparation
 
 After downloading the data from the [challenge website](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/data) you need to prepare the data for nnUNet. This is rather straightforward, as we have adopted the dataset structure for this challenge and use a custom reader writer class. The only thing you really need to do is the conversion of the ground truth labels from png to tif files. The scans are saved as folders containing all 65 slices in the original tif format.
@@ -148,11 +150,32 @@ In order to enable training 5 fold cross validation the data needs to be split i
 
 ### Training of the model
 
-TBD
+For the final submission we ensembled two models, both trained on folds 0 and 2. To train these models yourself you can run the commands
+```
+nnUNetv2_train 801 3d_fullres 0 -tr nnUNetTrainer3DSqEx2D -p nnUNetPlans_large_4conv
+nnUNetv2_train 801 3d_fullres 2 -tr nnUNetTrainer3DSqEx2D -p nnUNetPlans_large_4conv
+nnUNetv2_train 801 3d_fullres 0 -tr nnUNetTrainer3DSqEx2D_wd -p nnUNetPlans_bs4_large_4conv
+nnUNetv2_train 801 3d_fullres 2 -tr nnUNetTrainer3DSqEx2D_wd -p nnUNetPlans_bs4_large_4conv
+```
+
+The trained models will be saved into the `nnUNet_results` folder. nnUNet saves the best checkpoint (at the highest ema) and the final checkpoint and run a final validation and evaluation of the results on the whole validation split for both. The produced summary files can be used to determine which of the checkpoints to use for inference.
 
 ### Inference on test data
 
-TBD
+Inference is done with the custom predict_overthinking_segmenter_32ind_tta_helper function, which is a helper function for the predict_overthinking_segmenter_32ind_tta function. It can be imported by running
+
+`from nnunetv2.inference.predict_overthinking_segmenter_32ind_tta import predict_overthinking_segmenter_32ind_tta_helper`
+
+The function can then be called by
+```
+    predict_overthinking_segmenter_32ind_tta_helper(
+        input_folder,
+        output_folder,
+        nnUNetTrainer,
+        conf_dir
+    )
+```
+where input_folder contains the cases in the challenge format and conf_dir contains all checkpoint files, the plans file and the dataset file.
 
 ## Preliminary Last Words
 

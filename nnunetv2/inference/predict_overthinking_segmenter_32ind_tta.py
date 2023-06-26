@@ -284,13 +284,7 @@ def predict_from_memmap_list(
 
 def convert_to_csv(output_folder):
     output_folder = Path(output_folder)
-    npy_files = sorted(
-        [
-            f
-            for f in output_folder.iterdir()
-            if f.match("*.npy") and not f.match("*_seg.npy")
-        ]
-    )
+    npy_files = sorted([f for f in output_folder.iterdir() if f.match("*.npy") and not f.match("*_seg.npy")])
     inklabels_rle = dict()
     for npy_file in npy_files:
         mask = np.load(npy_file)
@@ -343,23 +337,45 @@ def predict_overthinking_segmenter_32ind_tta(
     convert_to_csv(output_folder)
 
 
-if __name__ == "__main__":
-    input_folder = Path("vesuvius/unwrapped_scrolls/data")
-    output_folder = Path("vesuvius/unwrapped_scrolls/predictions")
-    conf_dir = Path(
-        "vesuvius/submissions/764-nnUNetTrainer3DSqEx2D-ndbd2-bd4-large4conv"
+def predict_overthinking_segmenter_32ind_tta_helper(input_folder, output_folder, trainer, conf_dir):
+    input_folder = Path(input_folder)
+    output_folder = Path(output_folder)
+    conf_dir = Path(conf_dir)
+    plans_file = conf_dir / "plans.json"
+    dataset_json_file = conf_dir / "dataset.json"
+    checkpoint_path = conf_dir
+    nnUNetTrainer = recursive_find_python_class(join(nnunetv2.__path__[0], "training", "nnUNetTrainer"), 
+                                                trainer, "nnunetv2.training.nnUNetTrainer")
+    predict_overthinking_segmenter_32ind_tta(
+        input_folder,
+        output_folder,
+        nnUNetTrainer,
+        plans_file,
+        dataset_json_file,
+        checkpoint_path,
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input_folder")
+    parser.add_argument("-o", "--output_folder")
+    parser.add_argument("-c", "--conf_dir")
+    # trainer does not need to be changed if architecture stays the same!
+    parser.add_argument("-tr", "--trainer", default="nnUNetTrainer3DSqEx2D")
+    args = parser.parse_args()
+
+    input_folder = Path(args.input_folder)
+    output_folder = Path(args.output_folder)
+    conf_dir = Path(args.conf_dir)
     plans_file = conf_dir / "plans.json"
     dataset_json_file = conf_dir / "dataset.json"
     checkpoint_path = conf_dir
 
-    trainer = "nnUNetTrainer3DSqEx2D"
+    trainer = args.trainer
 
-    nnUNetTrainer = recursive_find_python_class(
-        join(nnunetv2.__path__[0], "training", "nnUNetTrainer"),
-        trainer,
-        "nnunetv2.training.nnUNetTrainer",
-    )
+    nnUNetTrainer = recursive_find_python_class(join(nnunetv2.__path__[0], "training", "nnUNetTrainer"), 
+                                                trainer, "nnunetv2.training.nnUNetTrainer")
 
     t_start = time()
 

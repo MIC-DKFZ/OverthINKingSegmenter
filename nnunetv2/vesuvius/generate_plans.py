@@ -8,7 +8,7 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, save
 nnUNet_preprocessed = Path(os.environ["nnUNet_preprocessed"])
 
 
-def generate_plans(dataset):
+def generate_plans(dataset="Dataset801_vesuvius_split"):
     basic_plans = load_json(nnUNet_preprocessed/dataset/"nnUNetPlans.json")
     save_json(basic_plans, nnUNet_preprocessed/dataset/"nnUNetPlans_old.json", sort_keys=False) # default which we don't want
     basic_plans["configurations"]["3d_fullres"]["conv_kernel_sizes"] = \

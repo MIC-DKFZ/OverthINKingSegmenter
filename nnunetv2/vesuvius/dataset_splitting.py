@@ -67,23 +67,23 @@ def split_and_save(old_dataset, new_dataset, case):
         save_pickle(meta_slice, new_dataset/"nnUNetPlans_3d_fullres"/f"{name}.pkl")
 
 
-def create_new_dataset(old_task_name, new_task_name):
-    # create new task with data split into 25 parts each
-    old_task = nnUNet_preprocessed/old_task_name
-    new_task = nnUNet_preprocessed/new_task_name
-    new_task.mkdir(exist_ok=True)
-    (new_task/"gt_segmentations").mkdir(exist_ok=True)
-    (new_task/"nnUNetPlans_3d_fullres").mkdir(exist_ok=True)
-    dataset = load_json(old_task/"dataset.json")
-    dataset["name"] = new_task_name
-    save_json(dataset, new_task/"dataset.json", sort_keys=False)
-    shutil.copy(old_task/"dataset_fingerprint.json", new_task/"dataset_fingerprint.json")
-    plans = load_json(old_task/"nnUNetPlans.json")
-    plans["dataset_name"] = new_task_name
-    save_json(plans, new_task/"nnUNetPlans.json", sort_keys=False)
-    cases = sorted([c.name[:-4] for c in (old_task/"gt_segmentations").iterdir() if c.match("*.tif")])
+def create_new_dataset(old_dataset_name="Dataset800_vesuvius", new_dataset_name="Dataset801_vesuvius_split"):
+    # create new dataset with data split into 25 parts each
+    old_dataset = nnUNet_preprocessed/old_dataset_name
+    new_dataset = nnUNet_preprocessed/new_dataset_name
+    new_dataset.mkdir(exist_ok=True)
+    (new_dataset/"gt_segmentations").mkdir(exist_ok=True)
+    (new_dataset/"nnUNetPlans_3d_fullres").mkdir(exist_ok=True)
+    dataset = load_json(old_dataset/"dataset.json")
+    dataset["name"] = new_dataset_name
+    save_json(dataset, new_dataset/"dataset.json", sort_keys=False)
+    shutil.copy(old_dataset/"dataset_fingerprint.json", new_dataset/"dataset_fingerprint.json")
+    plans = load_json(old_dataset/"nnUNetPlans.json")
+    plans["dataset_name"] = new_dataset_name
+    save_json(plans, new_dataset/"nnUNetPlans.json", sort_keys=False)
+    cases = sorted([c.name[:-4] for c in (old_dataset/"gt_segmentations").iterdir() if c.match("*.tif")])
     for case in cases:
-        split_and_save(old_task, new_task, case)
+        split_and_save(old_dataset, new_dataset, case)
 
     # create seeded split file for 5 fold cv training. every split contains 5 parts from each scroll
     folds = [[] for _ in range(5)]
@@ -99,7 +99,7 @@ def create_new_dataset(old_task_name, new_task_name):
     splits.append({"train": sorted(folds[0]+folds[2]+folds[3]+folds[4]), "val": sorted(folds[1])})
     splits.append({"train": sorted(folds[1]+folds[2]+folds[3]+folds[4]), "val": sorted(folds[0])})
 
-    save_json(splits, new_task/"splits_final.json")
+    save_json(splits, new_dataset/"splits_final.json")
 
 
 if __name__ == "__main__":

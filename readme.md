@@ -177,6 +177,10 @@ The function can then be called by
 ```
 where input_folder contains the cases in the challenge format and conf_dir contains all checkpoint files, the plans file and the dataset file.
 
+### Pretrained weights
+
+Pretrained weights, as well as scripts for (pre)-processing of the raw challenge data, training and inference and a detailed documentation can now be found at [Zenodo](https://zenodo.org/record/8169325).
+
 ## Preliminary Last Words
 
 More details will follow, cheers!

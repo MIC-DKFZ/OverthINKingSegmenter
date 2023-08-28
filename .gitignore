@@ -115,3 +115,5 @@ ENV/
 
 *.model
 
+# Followup writeup
+!vesuvius_followup_writeup.pdf
